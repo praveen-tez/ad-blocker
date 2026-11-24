@@ -4,12 +4,12 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../models/protection_status.dart';
 import '../../../providers/protection_state.dart';
-import '../widgets/engine_status_banner.dart';
-import '../widgets/protection_status_card.dart';
+import '../../settings/screens/settings_screen.dart';
+import '../widgets/animated_vpn_button.dart';
 import '../widgets/domain_inspector_card.dart';
-import '../widgets/stats_overview_card.dart';
-import '../widgets/dns_live_preview_card.dart';
 
+/// Pure VPN-style Dashboard for CLEARWAVE.
+/// Centered around a large animated power button with radiant wave ripples.
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
@@ -23,12 +23,17 @@ class DashboardScreen extends StatelessWidget {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
                 color: isActive
-                    ? AppColors.activeGreen.withAlpha(30)
+                    ? AppColors.activeGreen.withAlpha(25)
                     : AppColors.surfaceElevated,
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: isActive
+                      ? AppColors.activeGreen.withAlpha(80)
+                      : AppColors.border,
+                ),
               ),
               child: Icon(
                 Icons.shield_rounded,
@@ -48,14 +53,14 @@ class DashboardScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          // Connection Status Pill
           Container(
-            margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: isActive
-                  ? AppColors.activeGreen.withAlpha(25)
+                  ? AppColors.activeGreen.withAlpha(20)
                   : AppColors.surfaceElevated,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isActive
                     ? AppColors.activeGreen.withAlpha(70)
@@ -75,7 +80,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  isActive ? 'PROTECTED' : 'STANDBY',
+                  isActive ? 'PROTECTED' : 'OFF',
                   style: GoogleFonts.poppins(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
@@ -86,35 +91,108 @@ class DashboardScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 4),
+          // Settings Gear Icon (navigates to Settings, Rules, and Advanced Config)
           IconButton(
-            icon: const Icon(Icons.info_outline_rounded, size: 20),
-            tooltip: 'Privacy Principles',
-            onPressed: () => _showPrivacySheet(context),
+            icon: const Icon(Icons.settings_outlined, size: 22),
+            tooltip: 'Settings & Rules',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const EngineStatusBanner(),
-              // Central One-Tap Power Shield Button
-              ProtectionStatusCard(
+              const SizedBox(height: 28),
+
+              // Hero: Center Animated VPN Power Button with Waves
+              AnimatedVpnButton(
                 status: controller.status,
-                totalActiveRules: controller.totalActiveRules,
                 onToggle: controller.toggleProtection,
               ),
-              // Activity Statistics Overview
-              StatsOverviewCard(stats: controller.stats),
-              // Quick Category Shields
-              _buildQuickShieldsCard(context, controller),
-              // Live Domain Filter Inspector (Allows testing any domain)
+
+              const SizedBox(height: 24),
+
+              // Server / Protocol Info Pill
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceCard,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.dns_rounded,
+                      size: 14,
+                      color: isActive ? AppColors.primary : AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${controller.selectedDnsResolver} • ${controller.totalActiveRules} Rules',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Simple 3-Metric Quick Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricTile(
+                        icon: Icons.block_rounded,
+                        color: const Color(0xFFFF5252),
+                        label: 'Ads Blocked',
+                        value: controller.stats.blockedAds.toString(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildMetricTile(
+                        icon: Icons.fingerprint_rounded,
+                        color: AppColors.primary,
+                        label: 'Trackers',
+                        value: controller.stats.blockedTrackers.toString(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildMetricTile(
+                        icon: Icons.bolt_rounded,
+                        color: const Color(0xFFFFD600),
+                        label: 'Data Saved',
+                        value: '${controller.stats.dataSavedMb} MB',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Bottom Section: Ad Blocker Test Tool (Allows testing any URL/domain)
               const DomainInspectorCard(),
-              // DNS Activity Preview
-              DnsLivePreviewCard(entries: controller.dnsFeed),
-              const SizedBox(height: 32),
+
+              const SizedBox(height: 36),
             ],
           ),
         ),
@@ -122,200 +200,43 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickShieldsCard(BuildContext context, ProtectionController controller) {
+  Widget _buildMetricTile({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String value,
+  }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
         color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border, width: 1.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(height: 6),
           Text(
-            'QUICK PROTECTION SHIELDS',
+            value,
             style: GoogleFonts.poppins(
-              fontSize: 11,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
-              letterSpacing: 0.8,
+              color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 14),
-          _buildShieldRow(
-            icon: Icons.block_rounded,
-            iconColor: const Color(0xFFFF5252),
-            title: 'Block Display & Video Ads',
-            subtitle: 'Banners, intrusive popups, and ad servers',
-            isEnabled: controller.categories.any((c) => c.id == 'ads' && c.isEnabled),
-            onChanged: () => controller.toggleCategory('ads'),
-          ),
-          const Divider(height: 20),
-          _buildShieldRow(
-            icon: Icons.fingerprint_rounded,
-            iconColor: AppColors.primary,
-            title: 'Stop Online Trackers',
-            subtitle: 'Analytics scripts, profiling, and telemetry',
-            isEnabled: controller.categories.any((c) => c.id == 'trackers' && c.isEnabled),
-            onChanged: () => controller.toggleCategory('trackers'),
-          ),
-          const Divider(height: 20),
-          _buildShieldRow(
-            icon: Icons.security_rounded,
-            iconColor: AppColors.activeGreen,
-            title: 'Block Malicious Domains',
-            subtitle: 'Known phishing, fraud, and malware sites',
-            isEnabled: controller.categories.any((c) => c.id == 'malware' && c.isEnabled),
-            onChanged: () => controller.toggleCategory('malware'),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              color: AppColors.textMuted,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildShieldRow({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required bool isEnabled,
-    required VoidCallback onChanged,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: iconColor.withAlpha(25),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 18, color: iconColor),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Switch(
-          value: isEnabled,
-          onChanged: (_) => onChanged(),
-        ),
-      ],
-    );
-  }
-
-  void _showPrivacySheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surfaceCard,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 24),
-                  const SizedBox(width: 10),
-                  Text(
-                    'CLEARWAVE Privacy Standard',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text(
-                AppStrings.privacyPromise,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 12),
-              _buildPrivacyPoint(
-                'No SSL/TLS Interception',
-                'CLEARWAVE never asks you to install Root CA certificates.',
-              ),
-              const SizedBox(height: 8),
-              _buildPrivacyPoint(
-                'Zero Browsing History Collection',
-                'Your visited URLs, search queries, and content are never logged or uploaded.',
-              ),
-              const SizedBox(height: 8),
-              _buildPrivacyPoint(
-                'On-Device Local Processing',
-                'Filtering decisions occur 100% locally on your device.',
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPrivacyPoint(String title, String desc) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Icon(Icons.check_circle_rounded, color: AppColors.activeGreen, size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              Text(
-                desc,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

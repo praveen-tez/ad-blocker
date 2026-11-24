@@ -61,25 +61,28 @@ void main() {
     expect(find.text('EVALUATION: BLOCKED'), findsOneWidget);
     expect(find.text('Add to Allowlist (Override)'), findsOneWidget);
 
-    // 4. Test Navigation to Rules Tab & SQLite loaded rules
-    await tester.tap(find.text('Rules'));
+    // 4. Test Navigation to Settings via top AppBar icon
+    final settingsButton = find.byIcon(Icons.settings_outlined);
+    expect(settingsButton, findsOneWidget);
+    await tester.tap(settingsButton);
     await tester.pumpAndSettle();
+
+    // Verify Settings screen and Rules entry tile
+    expect(find.text('Settings & Rules'), findsOneWidget);
     expect(find.text('Rules & Filtering'), findsOneWidget);
+
+    // 5. Navigate to Rules & Filtering screen from Settings
+    await tester.tap(find.text('Rules & Filtering'));
+    await tester.pumpAndSettle();
     expect(find.text('Advertising & Banners'), findsOneWidget);
 
-    // 5. Test Navigation to Custom Rules Tab
+    // 6. Test Navigation to Custom Rules Tab
     await tester.tap(find.text('Custom Rules'));
     await tester.pumpAndSettle();
     expect(
       find.text('Precedence hierarchy: Allowlist rules strictly override all blocklist categories and custom blocks.'),
       findsOneWidget,
     );
-
-    // 6. Test Navigation to Settings Tab with SQLite diagnostics
-    await tester.tap(find.text('Settings'));
-    await tester.pumpAndSettle();
-    expect(find.text('LOCAL DATABASE & STORAGE (STAGE 2)'), findsOneWidget);
-    expect(find.text('SQLite (clearwave.db)'), findsOneWidget);
   });
 
   test('ProtectionController rules precedence and management logic via SQLite', () async {

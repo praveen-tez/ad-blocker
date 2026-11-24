@@ -1,7 +1,10 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../providers/protection_state.dart';
+import '../../rules/screens/rules_screen.dart';
+import '../../streaming/screens/streaming_screen.dart';
 import '../../onboarding/screens/onboarding_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -13,11 +16,78 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings & Engine'),
+        title: Text(
+          'Settings & Rules',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildSectionHeader('PROTECTION RULES & STREAMING'),
+          const SizedBox(height: 8),
+          Material(
+            color: AppColors.surfaceCard,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: AppColors.border),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withAlpha(25),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
+                  ),
+                  title: Text(
+                    'Rules & Filtering',
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                  ),
+                  subtitle: Text(
+                    'Manage categories, blocklists, and custom allowlists',
+                    style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textMuted),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const RulesScreen()),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withAlpha(25),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.live_tv_rounded, color: AppColors.secondary, size: 20),
+                  ),
+                  title: Text(
+                    'Streaming Ad Compatibility',
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                  ),
+                  subtitle: Text(
+                    'Technical explanation of YouTube & video SSAI ads',
+                    style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textMuted),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const StreamingScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           _buildSectionHeader('UPSTREAM DNS RESOLVER'),
           const SizedBox(height: 8),
           Material(
