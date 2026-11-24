@@ -4,6 +4,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:clearwave/app.dart';
 import 'package:clearwave/core/constants/app_strings.dart';
 import 'package:clearwave/core/database/app_database.dart';
+import 'package:clearwave/core/platform/platform_channel_interface.dart';
 import 'package:clearwave/models/filter_rule.dart';
 import 'package:clearwave/providers/protection_state.dart';
 
@@ -18,7 +19,10 @@ void main() {
     final inMemoryDb = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
     dbManager = AppDatabase(db: inMemoryDb);
     await dbManager.database;
-    controller = ProtectionController(database: dbManager);
+    controller = ProtectionController(
+      engine: SimulatedProtectionEngine(),
+      database: dbManager,
+    );
     await controller.loadFromDatabase();
   });
 

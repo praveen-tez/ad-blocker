@@ -14,7 +14,7 @@ import '../models/filter_rule.dart';
 import '../models/dns_log_entry.dart';
 
 /// Central state provider for CLEARWAVE.
-/// Backed by persistent SQLite database for rules, categories, logs, and settings.
+/// Backed by persistent SQLite database and connected to native Android VpnService.
 class ProtectionController extends ChangeNotifier {
   final ProtectionPlatformInterface _engine;
   final AppDatabase _dbManager;
@@ -23,6 +23,7 @@ class ProtectionController extends ChangeNotifier {
   late final QueryLogDao _queryLogDao;
 
   late StreamSubscription<ProtectionState> _engineSubscription;
+  late StreamSubscription<DnsLogEntry> _dnsEventSubscription;
 
   ProtectionState _status = ProtectionState.disabled;
   BlockingStats _stats = BlockingStats.placeholder();
@@ -49,7 +50,7 @@ class ProtectionController extends ChangeNotifier {
   ProtectionController({
     ProtectionPlatformInterface? engine,
     AppDatabase? database,
-  })  : _engine = engine ?? SimulatedProtectionEngine(),
+  })  : _engine = engine ?? ProtectionPlatformInterface.create(),
         _dbManager = database ?? AppDatabase() {
     _ruleDao = RuleDao(_dbManager);
     _settingsDao = SettingsDao(_dbManager);
@@ -72,10 +73,23 @@ class ProtectionController extends ChangeNotifier {
   bool get blockLanTraffic => _blockLanTraffic;
   bool get hasCompletedOnboarding => _hasCompletedOnboarding;
   bool get isDatabaseReady => _isDatabaseReady;
+  bool get isNativeEngine => _engine is NativeAndroidProtectionEngine;
 
   Future<void> _init() async {
+    await _engine.initialize();
+
     _engineSubscription = _engine.statusStream.listen((newState) {
       _status = newState;
+      notifyListeners();
+    });
+
+    _dnsEventSubscription = _engine.dnsEventStream.listen((entry) async {
+      await _queryLogDao.insertLog(entry);
+      _dnsFeed = [entry, ..._dnsFeed.take(49)];
+      _stats = _stats.copyWith(
+        totalQueries: _stats.totalQueries + 1,
+        blockedAds: entry.isBlocked ? _stats.blockedAds + 1 : _stats.blockedAds,
+      );
       notifyListeners();
     });
 
@@ -117,6 +131,12 @@ class ProtectionController extends ChangeNotifier {
         totalQueries: 14210 + totalQueries,
       );
 
+      // 7. Sync active rule cache with native engine
+      final allowMap = {for (var e in _activeAllowlist.entries) e.key: e.value.note};
+      final blockMap = {for (var e in _activeBlocklist.entries) e.key: e.value.note};
+      await _engine.syncRules(allowlist: allowMap, blocklist: blockMap);
+      await _engine.setUpstreamResolver(_selectedDnsResolver);
+
       _isDatabaseReady = true;
       notifyListeners();
     } catch (e) {
@@ -128,11 +148,15 @@ class ProtectionController extends ChangeNotifier {
 
   Future<void> toggleProtection() async {
     if (_status == ProtectionState.active) {
-      await _engine.stopProtection();
-      _status = ProtectionState.disabled;
+      final stopped = await _engine.stopProtection();
+      if (stopped) {
+        _status = ProtectionState.disabled;
+      }
     } else {
-      await _engine.startProtection();
-      _status = ProtectionState.active;
+      final started = await _engine.startProtection();
+      if (started) {
+        _status = ProtectionState.active;
+      }
     }
     notifyListeners();
   }
@@ -228,6 +252,7 @@ class ProtectionController extends ChangeNotifier {
   Future<void> setDnsResolver(String resolver) async {
     _selectedDnsResolver = resolver;
     await _settingsDao.setString('selected_dns', resolver);
+    await _engine.setUpstreamResolver(resolver);
     notifyListeners();
   }
 
@@ -257,6 +282,7 @@ class ProtectionController extends ChangeNotifier {
   @override
   void dispose() {
     _engineSubscription.cancel();
+    _dnsEventSubscription.cancel();
     _dbManager.close();
     super.dispose();
   }

@@ -75,3 +75,4 @@ class DomainNormalizer {
     return hierarchy;
   }
 }
+

@@ -1,28 +1,34 @@
 import 'package:material_ui/material_ui.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
+import '../../../providers/protection_state.dart';
 
-/// Top banner that explicitly flags the Stage 1 Foundation status.
+/// Top banner that dynamically displays native vs simulation engine status.
 class EngineStatusBanner extends StatelessWidget {
   const EngineStatusBanner({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = ProtectionScope.of(context);
+    final isNative = controller.isNativeEngine;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border, width: 1),
+        border: Border.all(
+          color: isNative ? AppColors.activeGreen.withAlpha(80) : AppColors.border,
+          width: 1,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.info_outline,
+          Icon(
+            isNative ? Icons.verified_user : Icons.info_outline,
             size: 16,
-            color: AppColors.textAccent,
+            color: isNative ? AppColors.activeGreen : AppColors.textAccent,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -32,11 +38,11 @@ class EngineStatusBanner extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      AppStrings.stage1NoticeTitle.toUpperCase(),
-                      style: const TextStyle(
+                      isNative ? 'ANDROID NATIVE ENGINE' : 'STAGE 3 — ANDROID VPN ENGINE READY',
+                      style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textAccent,
+                        color: isNative ? AppColors.activeGreen : AppColors.textAccent,
                         letterSpacing: 0.6,
                       ),
                     ),
@@ -47,24 +53,26 @@ class EngineStatusBanner extends StatelessWidget {
                         vertical: 1,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.badgeBackground,
+                        color: isNative ? AppColors.activeGreen.withAlpha(25) : AppColors.badgeBackground,
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Text(
-                        'UI & Arch Only',
+                      child: Text(
+                        isNative ? 'VpnService Active' : 'Native Kotlin Engine',
                         style: TextStyle(
                           fontSize: 9,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.badgeText,
+                          fontWeight: FontWeight.w600,
+                          color: isNative ? AppColors.activeGreen : AppColors.badgeText,
                         ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 3),
-                const Text(
-                  'Native VPN/DNS engines will be integrated in Stage 3 (Android) and Stage 4 (iOS). All telemetry shown below is placeholder.',
-                  style: TextStyle(
+                Text(
+                  isNative
+                      ? 'Android VpnService loopback TUN is active. DNS traffic is filtered locally without external proxying.'
+                      : 'Kotlin VpnService DNS loopback engine and TUN packet parser are fully implemented in native code.',
+                  style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.textSecondary,
                     height: 1.3,

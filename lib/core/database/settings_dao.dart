@@ -42,3 +42,4 @@ class SettingsDao {
     await setString(key, value.toString());
   }
 }
+
