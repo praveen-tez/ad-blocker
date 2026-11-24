@@ -37,3 +37,4 @@ extension ProtectionStateX on ProtectionState {
     }
   }
 }
+

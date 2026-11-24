@@ -20,3 +20,4 @@ class AppStrings {
       'DNS-level filtering cannot decouple server-stitched video advertisements (e.g., YouTube) '
       'from primary streams without breaking playback. Third-party ad trackers and web ads are blocked.';
 }
+

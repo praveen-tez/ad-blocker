@@ -61,3 +61,4 @@ class SimulatedProtectionEngine implements ProtectionPlatformInterface {
     _statusController.close();
   }
 }
+

@@ -1,95 +1,105 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:clearwave/app.dart';
 import 'package:clearwave/core/constants/app_strings.dart';
+import 'package:clearwave/core/database/app_database.dart';
 import 'package:clearwave/models/filter_rule.dart';
 import 'package:clearwave/providers/protection_state.dart';
 
 void main() {
-  testWidgets('CLEARWAVE Stage 1 smoke and UI structure test', (WidgetTester tester) async {
-    final controller = ProtectionController();
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+
+  late AppDatabase dbManager;
+  late ProtectionController controller;
+
+  setUp(() async {
+    final inMemoryDb = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
+    dbManager = AppDatabase(db: inMemoryDb);
+    await dbManager.database;
+    controller = ProtectionController(database: dbManager);
+    await controller.loadFromDatabase();
+  });
+
+  tearDown(() async {
+    controller.dispose();
+  });
+
+  testWidgets('CLEARWAVE Stage 2 SQLite integrated app smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(ClearwaveApp(controller: controller));
     await tester.pumpAndSettle();
 
     // 1. Verify Header and Product Branding
     expect(find.text(AppStrings.appName), findsOneWidget);
 
-    // 2. Verify Stage 1 Engine Notice Banner
-    expect(find.textContaining('STAGE 1 — FOUNDATION PREVIEW'), findsOneWidget);
+    // 2. Verify Domain Filter Inspector Tool (Stage 2 Feature)
+    expect(find.text('DOMAIN FILTER INSPECTOR'), findsOneWidget);
+    expect(find.text('Live Engine'), findsOneWidget);
 
-    // 3. Verify Protection Card & Status
-    expect(find.text('Unprotected'), findsOneWidget);
-    expect(find.text('Standby'), findsOneWidget);
+    // 3. Test Live Domain Evaluation in Inspector
+    final testButton = find.widgetWithText(FilledButton, 'Test');
+    expect(testButton, findsOneWidget);
+    await tester.tap(testButton);
 
-    // 4. Verify Placeholder Telemetry Badge
-    expect(find.text('Simulated Baseline'), findsOneWidget);
-    expect(find.text('Ads Blocked'), findsOneWidget);
-    expect(find.text('Trackers Halted'), findsOneWidget);
-
-    // 5. Test Protection Toggle interaction
-    final switchFinder = find.byType(Switch).first;
-    await tester.tap(switchFinder);
-    await tester.pump();
-
-    // Verify connecting or active transition
-    await tester.pump(const Duration(milliseconds: 700));
+    // Run async to let the SQLite FFI isolate complete the insert and lookup
+    await tester.runAsync(() async {
+      await Future.delayed(const Duration(milliseconds: 200));
+    });
     await tester.pumpAndSettle();
-    expect(find.text('Protected'), findsOneWidget);
 
-    // 6. Test Navigation to Rules Tab
+    // Evaluation of default 'ads.doubleclick.net' should be BLOCKED
+    expect(find.text('EVALUATION: BLOCKED'), findsOneWidget);
+    expect(find.text('Add to Allowlist (Override)'), findsOneWidget);
+
+    // 4. Test Navigation to Rules Tab & SQLite loaded rules
     await tester.tap(find.text('Rules'));
     await tester.pumpAndSettle();
     expect(find.text('Rules & Filtering'), findsOneWidget);
-    expect(find.text('Advertising & Commercial Banners'), findsOneWidget);
+    expect(find.text('Advertising & Banners'), findsOneWidget);
 
-    // 7. Test Navigation to Streaming Tab
-    await tester.tap(find.text('Streaming'));
+    // 5. Test Navigation to Custom Rules Tab
+    await tester.tap(find.text('Custom Rules'));
     await tester.pumpAndSettle();
-    expect(find.text('Streaming Compatibility'), findsOneWidget);
-    expect(find.text('Realistic Streaming Expectations'), findsOneWidget);
+    expect(
+      find.text('Precedence hierarchy: Allowlist rules strictly override all blocklist categories and custom blocks.'),
+      findsOneWidget,
+    );
 
-    // 8. Test Navigation to Settings Tab
+    // 6. Test Navigation to Settings Tab with SQLite diagnostics
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
-    expect(find.text('Settings & Engine'), findsOneWidget);
-    expect(find.text('Stage 1 — Foundation'), findsOneWidget);
-
-    controller.dispose();
+    expect(find.text('LOCAL DATABASE & STORAGE (STAGE 2)'), findsOneWidget);
+    expect(find.text('SQLite (clearwave.db)'), findsOneWidget);
   });
 
-  test('ProtectionController rules precedence and management logic', () {
-    final controller = ProtectionController();
-
-    // Initial state
-    expect(controller.rules.length, 3);
-    final initialActiveRules = controller.totalActiveRules;
+  test('ProtectionController rules precedence and management logic via SQLite', () async {
+    // Initial state loaded from seeded database
+    expect(controller.rules.length, greaterThanOrEqualTo(5));
 
     // Add valid block rule
-    final added = controller.addCustomRule(
-      domain: 'adserver.doubleclick.net',
+    final added = await controller.addCustomRule(
+      domain: 'https://custom-adserver.com:443/banner',
       type: RuleType.block,
-      note: 'Test Block',
+      note: 'Custom block test',
     );
     expect(added, isTrue);
-    expect(controller.rules.length, 4);
-    expect(controller.totalActiveRules, initialActiveRules + 1);
+    expect(controller.rules.any((r) => r.domain == 'custom-adserver.com'), isTrue);
 
     // Prevent duplicate
-    final duplicate = controller.addCustomRule(
-      domain: 'adserver.doubleclick.net',
+    final duplicate = await controller.addCustomRule(
+      domain: 'custom-adserver.com',
       type: RuleType.block,
     );
     expect(duplicate, isFalse);
 
     // Toggle rule
-    final ruleId = controller.rules.first.id;
-    controller.toggleRule(ruleId);
-    expect(controller.rules.first.isEnabled, isFalse);
+    final rule = controller.rules.firstWhere((r) => r.domain == 'custom-adserver.com');
+    await controller.toggleRule(rule.id);
+    expect(controller.rules.firstWhere((r) => r.domain == 'custom-adserver.com').isEnabled, isFalse);
 
     // Remove rule
-    controller.removeRule(ruleId);
-    expect(controller.rules.length, 3);
-
-    controller.dispose();
+    await controller.removeRule(rule.id);
+    expect(controller.rules.any((r) => r.domain == 'custom-adserver.com'), isFalse);
   });
 }

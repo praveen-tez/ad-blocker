@@ -101,6 +101,42 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          _buildSectionHeader('LOCAL DATABASE & STORAGE (STAGE 2)'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                _buildInfoRow('Database Engine', 'SQLite (clearwave.db)'),
+                const Divider(height: 16),
+                _buildInfoRow('Custom User Rules', '${controller.rules.length} stored rules'),
+                const Divider(height: 16),
+                _buildInfoRow('Active Filtering Rules', '${controller.totalActiveRules} active rules'),
+                const Divider(height: 16),
+                _buildInfoRow('Allowlist Precedence', 'Enforced by SQLite index'),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _confirmResetDatabase(context, controller),
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Reset Rules to Factory Defaults', style: TextStyle(fontSize: 11)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.warningAmber,
+                      side: BorderSide(color: AppColors.warningAmber.withAlpha(80)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           _buildSectionHeader('SYSTEM & DIAGNOSTICS'),
           const SizedBox(height: 8),
           Container(
@@ -114,9 +150,9 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 _buildInfoRow('Product Name', AppStrings.appName),
                 const Divider(height: 16),
-                _buildInfoRow('Development Stage', 'Stage 1 — Foundation'),
+                _buildInfoRow('Development Stage', 'Stage 2 — Local Functionality (Ready)'),
                 const Divider(height: 16),
-                _buildInfoRow('Engine Architecture', 'Hybrid Flutter + Native OS'),
+                _buildInfoRow('Local Rules Storage', 'Active & Verified'),
                 const Divider(height: 16),
                 _buildInfoRow('Android Target', 'Kotlin VpnService (Stage 3)'),
                 const Divider(height: 16),
@@ -142,6 +178,40 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 30),
+        ],
+      ),
+    );
+  }
+
+  void _confirmResetDatabase(BuildContext context, ProtectionController controller) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Reset Rule Database', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+        content: const Text(
+          'This will restore the factory default seed rules and categories in SQLite. Custom domains will be reset.',
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await controller.resetDatabase();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Rule database restored to factory defaults.')),
+                );
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.warningAmber),
+            child: const Text('Reset Database'),
+          ),
         ],
       ),
     );

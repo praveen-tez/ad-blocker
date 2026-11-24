@@ -3,7 +3,7 @@ enum RuleType {
   allow,
 }
 
-/// Representation of a custom user-defined domain rule.
+/// Representation of a custom user-defined or category-seeded domain rule.
 /// Allowlist rules strictly take precedence over blocklist rules.
 class FilterRule {
   final String id;
@@ -11,6 +11,7 @@ class FilterRule {
   final RuleType type;
   final bool isWildcard;
   final bool isEnabled;
+  final String? categoryId;
   final DateTime addedAt;
   final String note;
 
@@ -20,12 +21,14 @@ class FilterRule {
     required this.type,
     this.isWildcard = true,
     this.isEnabled = true,
+    this.categoryId,
     required this.addedAt,
     this.note = '',
   });
 
   bool get isAllow => type == RuleType.allow;
   bool get isBlock => type == RuleType.block;
+  bool get isCustom => categoryId == null;
 
   FilterRule copyWith({
     String? id,
@@ -33,6 +36,7 @@ class FilterRule {
     RuleType? type,
     bool? isWildcard,
     bool? isEnabled,
+    String? categoryId,
     DateTime? addedAt,
     String? note,
   }) {
@@ -42,6 +46,7 @@ class FilterRule {
       type: type ?? this.type,
       isWildcard: isWildcard ?? this.isWildcard,
       isEnabled: isEnabled ?? this.isEnabled,
+      categoryId: categoryId ?? this.categoryId,
       addedAt: addedAt ?? this.addedAt,
       note: note ?? this.note,
     );

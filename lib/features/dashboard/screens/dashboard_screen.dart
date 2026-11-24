@@ -5,6 +5,7 @@ import '../../../models/protection_status.dart';
 import '../../../providers/protection_state.dart';
 import '../widgets/engine_status_banner.dart';
 import '../widgets/protection_status_card.dart';
+import '../widgets/domain_inspector_card.dart';
 import '../widgets/stats_overview_card.dart';
 import '../widgets/dns_live_preview_card.dart';
 
@@ -53,6 +54,7 @@ class DashboardScreen extends StatelessWidget {
                 totalActiveRules: controller.totalActiveRules,
                 onToggle: controller.toggleProtection,
               ),
+              const DomainInspectorCard(),
               StatsOverviewCard(stats: controller.stats),
               DnsLivePreviewCard(entries: controller.dnsFeed),
               const SizedBox(height: 24),

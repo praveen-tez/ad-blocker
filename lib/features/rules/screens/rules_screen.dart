@@ -1,10 +1,25 @@
 import 'package:material_ui/material_ui.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../models/filter_rule.dart';
 import '../../../providers/protection_state.dart';
 import '../widgets/add_domain_dialog.dart';
 
-class RulesScreen extends StatelessWidget {
+class RulesScreen extends StatefulWidget {
   const RulesScreen({super.key});
+
+  @override
+  State<RulesScreen> createState() => _RulesScreenState();
+}
+
+class _RulesScreenState extends State<RulesScreen> {
+  final _searchController = TextEditingController();
+  RuleType? _filterType;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,21 +94,15 @@ class RulesScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            category.name,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: category.isEnabled
-                                  ? AppColors.textPrimary
-                                  : AppColors.textMuted,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      category.name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: category.isEnabled
+                            ? AppColors.textPrimary
+                            : AppColors.textMuted,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -115,7 +124,7 @@ class RulesScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '${category.ruleCount.toString()} local rules',
+                        '${category.ruleCount} embedded rules (SQLite)',
                         style: const TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w500,
@@ -142,9 +151,21 @@ class RulesScreen extends StatelessWidget {
     BuildContext context,
     ProtectionController controller,
   ) {
-    final rules = controller.rules;
-    final allowCount = rules.where((r) => r.isAllow).length;
-    final blockCount = rules.where((r) => r.isBlock).length;
+    var filteredRules = controller.rules;
+
+    // Apply type filter
+    if (_filterType != null) {
+      filteredRules = filteredRules.where((r) => r.type == _filterType).toList();
+    }
+
+    // Apply search filter
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isNotEmpty) {
+      filteredRules = filteredRules.where((r) {
+        return r.domain.toLowerCase().contains(query) ||
+            r.note.toLowerCase().contains(query);
+      }).toList();
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -155,16 +176,23 @@ class RulesScreen extends StatelessWidget {
           showDialog(
             context: context,
             builder: (_) => AddDomainDialog(
-              onAdd: (domain, type, note) {
-                final success = controller.addCustomRule(
+              onAdd: (domain, type, note) async {
+                final success = await controller.addCustomRule(
                   domain: domain,
                   type: type,
                   note: note,
                 );
+                if (!context.mounted) return;
                 if (!success) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Rule already exists or is invalid.'),
+                      content: Text('Rule already exists or domain format is invalid.'),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Added $domain to ${type == RuleType.allow ? "Allowlist" : "Blocklist"}'),
                     ),
                   );
                 }
@@ -181,6 +209,7 @@ class RulesScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Precedence explanation banner
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -209,34 +238,70 @@ class RulesScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          // Search Bar
+          TextField(
+            controller: _searchController,
+            style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Search custom rules...',
+              prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {});
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: AppColors.surfaceCard,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          // Filter Chips
           Row(
             children: [
-              Expanded(
-                child: _buildCountBadge(
-                  label: 'ALLOWLIST (BYPASS)',
-                  count: allowCount,
-                  color: AppColors.activeGreen,
-                ),
+              _buildFilterChip(
+                label: 'All (${controller.rules.length})',
+                isSelected: _filterType == null,
+                onSelected: () => setState(() => _filterType = null),
+                activeColor: AppColors.primary,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildCountBadge(
-                  label: 'BLOCKLIST (CUSTOM)',
-                  count: blockCount,
-                  color: AppColors.errorRed,
-                ),
+              const SizedBox(width: 8),
+              _buildFilterChip(
+                label: 'Allow (${controller.allowlistCount})',
+                isSelected: _filterType == RuleType.allow,
+                onSelected: () => setState(() => _filterType = RuleType.allow),
+                activeColor: AppColors.activeGreen,
+              ),
+              const SizedBox(width: 8),
+              _buildFilterChip(
+                label: 'Block (${controller.customBlockCount})',
+                isSelected: _filterType == RuleType.block,
+                onSelected: () => setState(() => _filterType = RuleType.block),
+                activeColor: AppColors.errorRed,
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          if (rules.isEmpty)
-            const Center(
+          const SizedBox(height: 14),
+          // List of rules
+          if (filteredRules.isEmpty)
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(40),
+                padding: const EdgeInsets.all(40),
                 child: Text(
-                  'No custom rules configured yet.',
-                  style: TextStyle(color: AppColors.textMuted),
+                  _searchController.text.isNotEmpty
+                      ? 'No rules match "${_searchController.text}".'
+                      : 'No custom rules found.',
+                  style: const TextStyle(color: AppColors.textMuted),
                 ),
               ),
             )
@@ -244,9 +309,9 @@ class RulesScreen extends StatelessWidget {
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: rules.length,
+              itemCount: filteredRules.length,
               itemBuilder: (context, index) {
-                final rule = rules[index];
+                final rule = filteredRules[index];
                 final isAllow = rule.isAllow;
 
                 return Container(
@@ -320,7 +385,7 @@ class RulesScreen extends StatelessWidget {
                           size: 18,
                           color: AppColors.textMuted,
                         ),
-                        onPressed: () => controller.removeRule(rule.id),
+                        onPressed: () => _confirmDelete(context, controller, rule),
                       ),
                       Switch(
                         value: rule.isEnabled,
@@ -337,38 +402,64 @@ class RulesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCountBadge({
+  Widget _buildFilterChip({
     required String label,
-    required int count,
-    required Color color,
+    required bool isSelected,
+    required VoidCallback onSelected,
+    required Color activeColor,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textMuted,
-              letterSpacing: 0.5,
-            ),
+    return InkWell(
+      onTap: onSelected,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withAlpha(25) : AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isSelected ? activeColor : AppColors.border,
+            width: 1,
           ),
-          const SizedBox(height: 4),
-          Text(
-            '$count rules active',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? activeColor : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(
+    BuildContext context,
+    ProtectionController controller,
+    FilterRule rule,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Delete Rule', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+        content: Text(
+          'Remove "${rule.domain}" from custom ${rule.isAllow ? "allowlist" : "blocklist"}?',
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              controller.removeRule(rule.id);
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.errorRed),
+            child: const Text('Delete'),
           ),
         ],
       ),

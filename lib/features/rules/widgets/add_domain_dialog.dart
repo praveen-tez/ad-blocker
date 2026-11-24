@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/filtering/domain_normalizer.dart';
 import '../../../models/filter_rule.dart';
 
 class AddDomainDialog extends StatefulWidget {
@@ -25,22 +26,20 @@ class _AddDomainDialogState extends State<AddDomainDialog> {
   }
 
   void _submit() {
-    final domain = _domainController.text.trim().toLowerCase();
-    final domainRegex = RegExp(
-      r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$',
-    );
+    final rawDomain = _domainController.text.trim();
+    final normalized = DomainNormalizer.normalize(rawDomain);
 
-    if (domain.isEmpty) {
+    if (rawDomain.isEmpty) {
       setState(() => _errorMessage = 'Domain cannot be empty');
       return;
     }
 
-    if (!domainRegex.hasMatch(domain)) {
-      setState(() => _errorMessage = 'Enter a valid domain (e.g., ads.example.com)');
+    if (normalized == null) {
+      setState(() => _errorMessage = 'Enter a valid domain name (e.g., ads.example.com)');
       return;
     }
 
-    widget.onAdd(domain, _selectedType, _noteController.text.trim());
+    widget.onAdd(normalized, _selectedType, _noteController.text.trim());
     Navigator.of(context).pop();
   }
 
