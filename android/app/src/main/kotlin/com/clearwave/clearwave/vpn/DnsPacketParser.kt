@@ -217,3 +217,4 @@ object DnsPacketParser {
         return (sum.inv() and 0xFFFF).toShort()
     }
 }
+

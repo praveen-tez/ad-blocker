@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:material_ui/material_ui.dart';
 import '../core/database/app_database.dart';
 import '../core/database/rule_dao.dart';
@@ -277,6 +278,29 @@ class ProtectionController extends ChangeNotifier {
   Future<void> resetDatabase() async {
     await _dbManager.resetToDefaults();
     await loadFromDatabase();
+  }
+
+  // MARK: - Platform Capabilities & iOS Export
+
+  Future<Map<String, dynamic>> checkPlatformCapabilities() async {
+    return await _engine.checkCapabilities();
+  }
+
+  /// Exports the active blocklist in Apple Safari Content Blocker JSON format.
+  String exportSafariContentBlockerJson() {
+    final blockDomains = _activeBlocklist.keys.toList();
+    final rules = [
+      {
+        'trigger': {
+          'url-filter': '.*',
+          'if-domain': blockDomains.map((d) => '*$d').toList(),
+        },
+        'action': {
+          'type': 'block',
+        },
+      }
+    ];
+    return const JsonEncoder.withIndent('  ').convert(rules);
   }
 
   @override

@@ -82,4 +82,63 @@ void main() {
       engine.dispose();
     });
   });
+
+  group('NativeIosProtectionEngine Platform Channel & Feasibility Tests', () {
+    const methodChannel = MethodChannel('com.clearwave/engine');
+    final log = <MethodCall>[];
+
+    setUp(() {
+      log.clear();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(methodChannel, (MethodCall methodCall) async {
+        log.add(methodCall);
+        switch (methodCall.method) {
+          case 'getStatus':
+            return false;
+          case 'startProtection':
+            return true;
+          case 'stopProtection':
+            return true;
+          case 'syncRules':
+            return true;
+          case 'setUpstreamDns':
+            return true;
+          case 'checkCapabilities':
+            return {
+              'platform': 'iOS',
+              'dnsSettingsSupported': true,
+              'safariContentBlockerSupported': true,
+              'packetTunnelEntitlementGranted': false,
+              'framework': 'NetworkExtension (NEDNSSettingsManager)',
+            };
+          default:
+            return null;
+        }
+      });
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(methodChannel, null);
+    });
+
+    test('NativeIosProtectionEngine lifecycle and capabilities inspection', () async {
+      final engine = NativeIosProtectionEngine();
+
+      final started = await engine.startProtection();
+      expect(started, isTrue);
+      expect(log.any((call) => call.method == 'startProtection'), isTrue);
+
+      final caps = await engine.checkCapabilities();
+      expect(caps['platform'], 'iOS');
+      expect(caps['dnsSettingsSupported'], isTrue);
+      expect(caps['packetTunnelEntitlementGranted'], isFalse);
+
+      final stopped = await engine.stopProtection();
+      expect(stopped, isTrue);
+      expect(log.any((call) => call.method == 'stopProtection'), isTrue);
+
+      engine.dispose();
+    });
+  });
 }

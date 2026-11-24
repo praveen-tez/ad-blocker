@@ -150,13 +150,74 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 _buildInfoRow('Product Name', AppStrings.appName),
                 const Divider(height: 16),
-                _buildInfoRow('Development Stage', 'Stage 3 — Android Engine Implemented'),
+                _buildInfoRow('Development Stage', 'Stage 5 — Cross-Platform Production Ready'),
                 const Divider(height: 16),
                 _buildInfoRow('Local Rules Storage', 'SQLite (clearwave.db)'),
                 const Divider(height: 16),
-                _buildInfoRow('Android Target', 'Kotlin VpnService (Implemented)'),
+                _buildInfoRow('Android Target', 'Kotlin VpnService (DNS Sinkhole Loopback)'),
                 const Divider(height: 16),
-                _buildInfoRow('iOS Target', 'NetworkExtension / DNS (Stage 4)'),
+                _buildInfoRow('iOS Target', 'NetworkExtension / NEDNSSettingsManager'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildSectionHeader('PLATFORM CAPABILITIES & IOS EXPORT (STAGE 4 & 5)'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'iOS & System Capabilities Breakdown',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  '• NEDNSSettingsManager: Public Apple API (iOS 14+) for system-wide encrypted DNS (DoH/DoT) without special developer entitlements.\n'
+                  '• Safari Content Blocker: JSON rule list compiled for Safari web browsing.\n'
+                  '• Packet Tunnel Provider: Requires restricted com.apple.developer.networking.networkextension entitlement.',
+                  style: TextStyle(fontSize: 11, height: 1.4, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showPlatformCapabilitiesDialog(context, controller),
+                        icon: const Icon(Icons.security, size: 16),
+                        label: const Text('Check Capabilities', style: TextStyle(fontSize: 11)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showSafariRulesDialog(context, controller),
+                        icon: const Icon(Icons.code, size: 16),
+                        label: const Text('Safari JSON Rules', style: TextStyle(fontSize: 11)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.activeGreen,
+                          side: const BorderSide(color: AppColors.activeGreen),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -178,6 +239,116 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 30),
+        ],
+      ),
+    );
+  }
+
+  void _showPlatformCapabilitiesDialog(BuildContext context, ProtectionController controller) async {
+    final caps = await controller.checkPlatformCapabilities();
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Row(
+          children: [
+            Icon(Icons.verified_user, color: AppColors.primary, size: 20),
+            SizedBox(width: 8),
+            Text('Platform Capabilities', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: caps.entries.map((e) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${e.key}: ',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '${e.value}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Close', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSafariRulesDialog(BuildContext context, ProtectionController controller) {
+    final jsonRules = controller.exportSafariContentBlockerJson();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Row(
+          children: [
+            Icon(Icons.apple, color: AppColors.textPrimary, size: 22),
+            SizedBox(width: 8),
+            Text('Safari Content Blocker JSON', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Compiled Apple SFContentBlockerManager rule structure generated from active SQLite blocklist rules:',
+                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 220),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    jsonRules,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 10,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Close', style: TextStyle(color: Colors.black)),
+          ),
         ],
       ),
     );
