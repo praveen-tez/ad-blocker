@@ -1,84 +1,81 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../models/protection_status.dart';
 import '../../../providers/protection_state.dart';
 
-/// Top banner that dynamically displays native vs simulation engine status.
+/// Clean, consumer-friendly status banner for CLEARWAVE.
 class EngineStatusBanner extends StatelessWidget {
   const EngineStatusBanner({super.key});
 
   @override
   Widget build(BuildContext context) {
     final controller = ProtectionScope.of(context);
-    final isNative = controller.isNativeEngine;
+    final isActive = controller.status.isActive;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(10),
+        color: isActive
+            ? AppColors.activeGreen.withAlpha(20)
+            : AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isNative ? AppColors.activeGreen.withAlpha(80) : AppColors.border,
+          color: isActive
+              ? AppColors.activeGreen.withAlpha(60)
+              : AppColors.border,
           width: 1,
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            isNative ? Icons.verified_user : Icons.info_outline,
-            size: 16,
-            color: isNative ? AppColors.activeGreen : AppColors.textAccent,
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? AppColors.activeGreen.withAlpha(30)
+                  : AppColors.surface,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isActive ? Icons.shield_rounded : Icons.shield_outlined,
+              size: 16,
+              color: isActive ? AppColors.activeGreen : AppColors.textMuted,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      isNative ? 'ANDROID NATIVE ENGINE' : 'STAGE 3 — ANDROID VPN ENGINE READY',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: isNative ? AppColors.activeGreen : AppColors.textAccent,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isNative ? AppColors.activeGreen.withAlpha(25) : AppColors.badgeBackground,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        isNative ? 'VpnService Active' : 'Native Kotlin Engine',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: isNative ? AppColors.activeGreen : AppColors.badgeText,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
                 Text(
-                  isNative
-                      ? 'Android VpnService loopback TUN is active. DNS traffic is filtered locally without external proxying.'
-                      : 'Kotlin VpnService DNS loopback engine and TUN packet parser are fully implemented in native code.',
-                  style: const TextStyle(
+                  isActive ? 'ALL DEVICES & APPS PROTECTED' : 'READY TO BLOCK ADS',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: isActive ? AppColors.activeGreen : AppColors.textSecondary,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                Text(
+                  isActive
+                      ? 'Stopping ads & trackers in real-time'
+                      : 'One tap turns on ad blocking everywhere',
+                  style: GoogleFonts.poppins(
                     fontSize: 11,
-                    color: AppColors.textSecondary,
-                    height: 1.3,
+                    color: AppColors.textMuted,
                   ),
                 ),
               ],
+            ),
+          ),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isActive ? AppColors.activeGreen : AppColors.inactiveSlate,
             ),
           ),
         ],

@@ -1,15 +1,20 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 
-/// Clean, high-contrast, premium dark theme for CLEARWAVE.
+/// Clean, high-contrast, premium modern dark theme for CLEARWAVE.
+/// Styled with Poppins typography, obsidian surfaces, and electric accents.
 class AppTheme {
   AppTheme._();
 
   static ThemeData get darkTheme {
+    final poppinsBase = GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme);
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      fontFamily: GoogleFonts.poppins().fontFamily,
       scaffoldBackgroundColor: AppColors.background,
       primaryColor: AppColors.primary,
       colorScheme: const ColorScheme.dark(
@@ -21,17 +26,17 @@ class AppTheme {
         onSurface: AppColors.textPrimary,
         onError: Colors.white,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        systemOverlayStyle: SystemUiOverlayStyle(
+        systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarBrightness: Brightness.dark,
           statusBarIconBrightness: Brightness.light,
           statusBarColor: Colors.transparent,
         ),
-        titleTextStyle: TextStyle(
+        titleTextStyle: GoogleFonts.poppins(
           color: AppColors.textPrimary,
           fontSize: 18,
           fontWeight: FontWeight.w600,
@@ -58,13 +63,13 @@ class AppTheme {
         elevation: 0,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const TextStyle(
+            return GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: AppColors.primary,
             );
           }
-          return const TextStyle(
+          return GoogleFonts.poppins(
             fontSize: 11,
             fontWeight: FontWeight.w500,
             color: AppColors.textMuted,
@@ -77,41 +82,41 @@ class AppTheme {
           return const IconThemeData(color: AppColors.textMuted, size: 22);
         }),
       ),
-      textTheme: const TextTheme(
-        headlineMedium: TextStyle(
+      textTheme: poppinsBase.copyWith(
+        headlineMedium: const TextStyle(
           fontSize: 26,
           fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
           letterSpacing: -0.5,
         ),
-        headlineSmall: TextStyle(
+        headlineSmall: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
-        titleLarge: TextStyle(
+        titleLarge: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
-        titleMedium: TextStyle(
+        titleMedium: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: AppColors.textSecondary,
         ),
-        bodyLarge: TextStyle(
+        bodyLarge: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: AppColors.textPrimary,
           height: 1.4,
         ),
-        bodyMedium: TextStyle(
+        bodyMedium: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w400,
           color: AppColors.textSecondary,
           height: 1.35,
         ),
-        labelSmall: TextStyle(
+        labelSmall: const TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.8,

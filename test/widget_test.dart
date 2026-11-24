@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:clearwave/app.dart';
 import 'package:clearwave/core/constants/app_strings.dart';
@@ -9,6 +10,8 @@ import 'package:clearwave/models/filter_rule.dart';
 import 'package:clearwave/providers/protection_state.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
@@ -44,6 +47,8 @@ void main() {
     // 3. Test Live Domain Evaluation in Inspector
     final testButton = find.widgetWithText(FilledButton, 'Test');
     expect(testButton, findsOneWidget);
+    await tester.ensureVisible(testButton);
+    await tester.pumpAndSettle();
     await tester.tap(testButton);
 
     // Run async to let the SQLite FFI isolate complete the insert and lookup
